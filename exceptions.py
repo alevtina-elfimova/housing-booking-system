@@ -1,1 +1,3 @@
-class BookingError(Exception): """Собственное исключение системы бронирования"""
+class BookingError(Exception):
+    """Собственное исключение системы бронирования"""
+
