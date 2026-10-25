@@ -1,104 +1,318 @@
-from exceptions import BookingNotFoundError
 from datetime import date
 
-from models.accommodation import Apartment
+from models.accommodation import Apartment, House
 from models.customer import Customer
 from models.booking import Booking
-from models.payment import Payment
-from models.review import Review
 from services.booking_system import BookingSystem
-
 from services.data_manager import DataManager
-from pathlib import Path
+from exceptions import BookingNotFoundError
 
 
-apartment = Apartment(
-    1,
-    "Уютная квартира",
-    "Центральная улица, 10",
-    50,
-    3
-)
+def create_test_data():
+    """Создаёт начальные данные для демонстрации"""
+    apartment = Apartment(
+        1,
+        "Уютная квартира",
+        "Центральная улица, 10",
+        2500,
+        3
+    )
 
-customer = Customer(
-    1,
-    "Анна Иванова",
-    "anna@example.com"
-)
+    customer = Customer(
+        1,
+        "Анна Иванова",
+        "anna@example.com"
+    )
 
-booking = Booking(
-    1,
-    customer,
-    apartment,
-    date(2026, 11, 10),
-    date(2026, 11, 14)
-)
+    booking = Booking(
+        1,
+        customer,
+        apartment,
+        date(2026, 11, 10),
+        date(2026, 11, 14)
+    )
 
-payment = Payment(1, booking, 200, "Банковская карта")
+    system = BookingSystem()
+    system.add_booking(booking)
 
-review = Review(
-    1,
-    customer,
-    apartment,
-    5,
-    "Все понравилось"
-)
+    customers = [customer]
+    accommodations = [apartment]
 
-system = BookingSystem()
-system.add_booking(booking)
+    return system, customers, accommodations
 
-print(apartment.get_info())
-print(customer.get_info())
-print(booking.get_info())
-print(payment.get_info())
-print(review.get_info())
+def show_menu():
+    """Показывает главное меню"""
+    print("\nСистема бронирования жилья")
+    print("1. Показать бронирования")
+    print("2. Найти бронирование")
+    print("3. Создать бронирование")
+    print("4. Изменить статус бронирования")
+    print("5. Удалить бронирование")
+    print("6. Добавить клиента")
+    print("7. Добавить жильё")
+    print("8. Показать клиентов и жильё")
+    print("9. Сохранить данные в JSON")
+    print("10. Загрузить данные из JSON")
+    print("11. Сохранить данные в XML")
+    print("12. Загрузить данные из XML")
+    print("13. Выход")
 
-print("Всего бронирований:", len(system.get_all_bookings()))
+def main():
+    system, customers, accommodations = create_test_data()
+    data_manager = DataManager()
 
-print("\nПроверка управления бронированиями")
+    while True:
+        show_menu()
+        choice = input("Выберите действие: ")
 
-found_booking = system.find_booking(1)
-print("Найдено бронирование:", found_booking is not None)
+        if choice == "1":
+            bookings = system.get_all_bookings()
 
-updated = system.update_booking_status(1, "Подтверждено")
-print("Статус изменён:", updated)
-print("Новый статус:", booking.status)
+            if not bookings:
+                print("Бронирований пока нет.")
+            else:
+                for booking in bookings:
+                    print(booking.get_info())
 
-deleted = system.delete_booking(1)
-print("Бронирование удалено:", deleted)
-print("Осталось бронирований:", len(system.get_all_bookings()))
+        elif choice == "2":
+            try:
+                booking_id = int(input("Введите номер бронирования: "))
+                booking = system.find_booking(booking_id)
+                print(booking.get_info())
+            except ValueError:
+                print("Ошибка: нужно ввести целое число.")
+            except BookingNotFoundError as error:
+                print("Ошибка:", error)
 
-print("\nПроверка сохранения данных")
+        elif choice == "3":
+            try:
+                if not customers:
+                    print("Сначала добавьте клиента.")
+                    continue
 
-data_manager = DataManager()
+                if not accommodations:
+                    print("Сначала добавьте жильё.")
+                    continue
 
-test_data = [
-    {
-        "booking_id": 1,
-        "customer": "Анна Иванова",
-        "accommodation": "Уютная квартира",
-        "status": "Подтверждено"
-    }
-]
+                print("\n--- Клиенты ---")
+                for customer in customers:
+                    print(customer.get_info())
 
-data_folder = Path("data")
-data_folder.mkdir(exist_ok=True)
+                customer_id = int(input("Введите ID клиента для бронирования: "))
+                customer = next(
+                    (c for c in customers if c.customer_id == customer_id),
+                    None
+                )
 
-json_file = data_folder / "test_data.json"
-xml_file = data_folder / "test_data.xml"
+                if customer is None:
+                    print("Ошибка: клиент не найден.")
+                    continue
 
-data_manager.save_json(json_file, test_data)
-loaded_json = data_manager.load_json(json_file)
-print("Данные JSON:", loaded_json)
+                print("\n--- Доступное жильё ---")
+                for accommodation in accommodations:
+                    print(accommodation.get_info())
 
-data_manager.save_xml(xml_file, test_data)
-loaded_xml = data_manager.load_xml(xml_file)
-print("Данные XML:", loaded_xml)
+                accommodation_id = int(
+                    input("Введите ID жилья для бронирования: ")
+                )
+                accommodation = next(
+                    (
+                        a for a in accommodations
+                        if a.accommodation_id == accommodation_id
+                    ),
+                    None
+                )
+
+                if accommodation is None:
+                    print("Ошибка: жильё не найдено.")
+                    continue
+
+                booking_id = int(input("Введите номер бронирования: "))
+
+                if any(
+                        b.booking_id == booking_id
+                        for b in system.get_all_bookings()
+                ):
+                    print("Ошибка: бронирование с таким номером уже существует.")
+                    continue
+
+                check_in = date.fromisoformat(
+                    input("Дата заезда (ГГГГ-ММ-ДД): ")
+                )
+                check_out = date.fromisoformat(
+                    input("Дата выезда (ГГГГ-ММ-ДД): ")
+                )
+
+                booking = Booking(
+                    booking_id,
+                    customer,
+                    accommodation,
+                    check_in,
+                    check_out
+                )
+
+                system.add_booking(booking)
+
+                print("Бронирование успешно создано!")
+                print(booking.get_info())
+                print("Стоимость проживания:", booking.calculate_total())
+
+            except ValueError as error:
+                print("Ошибка ввода или даты:", error)
+
+        elif choice == "4":
+            try:
+                booking_id = int(input("Введите номер бронирования: "))
+                new_status = input(
+                    "Введите новый статус (подтверждено/отменено): "
+                ).strip().lower()
+
+                if new_status not in ("подтверждено", "отменено"):
+                    print("Ошибка: допустимые статусы — подтверждено или отменено.")
+                    continue
+
+                system.update_booking_status(booking_id, new_status)
+                print("Статус бронирования успешно изменён.")
+
+            except ValueError:
+                print("Ошибка: номер бронирования должен быть целым числом.")
+            except BookingNotFoundError as error:
+                print("Ошибка:", error)
+
+        elif choice == "5":
+            try:
+                booking_id = int(input("Введите номер бронирования для удаления: "))
+                system.delete_booking(booking_id)
+                print("Бронирование успешно удалено.")
+
+            except ValueError:
+                print("Ошибка: номер бронирования должен быть целым числом.")
+            except BookingNotFoundError as error:
+                print("Ошибка:", error)
+
+        elif choice == "6":
+            try:
+                customer_id = int(input("Введите ID клиента: "))
+
+                if any(c.customer_id == customer_id for c in customers):
+                    print("Ошибка: клиент с таким ID уже существует.")
+                    continue
+
+                name = input("Введите имя и фамилию клиента: ").strip()
+                email = input("Введите email клиента: ").strip()
+
+                if not name or not email or "@" not in email:
+                    print("Ошибка: введите имя и корректный email.")
+                    continue
+
+                customer = Customer(customer_id, name, email)
+                customers.append(customer)
+                print("Клиент успешно добавлен.")
+
+            except ValueError:
+                print("Ошибка: ID должен быть целым числом.")
+
+        elif choice == "7":
+            try:
+                accommodation_id = int(input("Введите ID жилья: "))
+
+                if any(a.accommodation_id == accommodation_id
+                       for a in accommodations):
+                    print("Ошибка: жильё с таким ID уже существует.")
+                    continue
+
+                title = input("Введите название жилья: ").strip()
+                address = input("Введите адрес жилья: ").strip()
+                price = float(input("Введите цену за ночь: "))
+
+                if not title or not address or price <= 0:
+                    print("Ошибка: укажите название, адрес и положительную цену.")
+                    continue
+
+                print("1. Квартира")
+                print("2. Дом")
+                accommodation_type = input("Выберите тип жилья: ")
+
+                if accommodation_type == "1":
+                    floor = int(input("Введите этаж: "))
+                    accommodation = Apartment(
+                        accommodation_id, title, address, price, floor
+                    )
+                elif accommodation_type == "2":
+                    garden_text = input("Есть сад? (да/нет): ").strip().lower()
+
+                    if garden_text not in ("да", "нет"):
+                        print("Ошибка: введите «да» или «нет».")
+                        continue
+
+                    has_garden = garden_text == "да"
+                    accommodation = House(
+                        accommodation_id, title, address, price, has_garden
+                    )
+                else:
+                    print("Ошибка: выберите 1 или 2.")
+                    continue
+
+                accommodations.append(accommodation)
+                print("Жильё успешно добавлено.")
+
+            except ValueError:
+                print("Ошибка: проверьте числовые данные.")
+
+        elif choice == "8":
+            print("\nКлиенты")
+            for customer in customers:
+                print(customer.get_info())
+
+            print("\nЖильё")
+            for accommodation in accommodations:
+                print(accommodation.get_info())
+
+        elif choice == "9":
+            records = data_manager.prepare_data(customers, accommodations, system)
+
+            try:
+                data_manager.save_json("data/bookings.json", records)
+                print("Данные успешно сохранены в data/bookings.json.")
+            except (OSError, TypeError, ValueError) as error:
+                print("Не удалось сохранить JSON:", error)
+
+        elif choice == "10":
+            records = data_manager.load_json("data/bookings.json")
+
+            if records is not None:
+                try:
+                    customers, accommodations = data_manager.restore_data(records, system)
+                    print("Данные успешно загружены из JSON.")
+                except (ValueError, TypeError, KeyError) as error:
+                    print("Не удалось восстановить данные из JSON:", error)
+
+        elif choice == "11":
+            records = data_manager.prepare_data(customers, accommodations, system)
+
+            try:
+                data_manager.save_xml("data/bookings.xml", records)
+                print("Данные успешно сохранены в data/bookings.xml.")
+            except (OSError, TypeError, ValueError) as error:
+                print("Не удалось сохранить XML:", error)
+
+        elif choice == "12":
+            records = data_manager.load_xml("data/bookings.xml")
+
+            if records is not None:
+                try:
+                    customers, accommodations = data_manager.restore_data(records, system)
+                    print("Данные успешно загружены из XML.")
+                except (ValueError, TypeError, KeyError) as error:
+                    print("Не удалось восстановить данные из XML:", error)
+
+        elif choice == "13":
+            print("Программа завершена.")
+            break
+
+        else:
+            print("Ошибка: выберите пункт от 1 до 13.")
 
 
-print("\nПроверка обработки исключения")
-
-try:
-    system.find_booking(999)
-except BookingNotFoundError as error:
-    print("Ошибка:", error)
+if __name__ == "__main__":
+    main()

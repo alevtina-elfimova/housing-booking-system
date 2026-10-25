@@ -5,6 +5,10 @@ class Booking:
 
     def __init__(self, booking_id, customer, accommodation,
                  check_in, check_out):
+        if check_out <= check_in:
+            raise ValueError(
+                "Дата выезда должна быть позже даты заезда."
+            )
         self.booking_id = booking_id
         self.customer = customer
         self.accommodation = accommodation

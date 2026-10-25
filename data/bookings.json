@@ -1,0 +1,26 @@
+[
+    {
+        "type": "customer",
+        "customer_id": 1,
+        "name": "Анна Иванова",
+        "email": "anna@example.com"
+    },
+    {
+        "type": "accommodation",
+        "accommodation_id": 1,
+        "title": "Уютная квартира",
+        "address": "Центральная улица, 10",
+        "price_per_night": 2500,
+        "kind": "apartment",
+        "floor": 3
+    },
+    {
+        "type": "booking",
+        "booking_id": 1,
+        "customer_id": 1,
+        "accommodation_id": 1,
+        "check_in": "2026-11-10",
+        "check_out": "2026-11-14",
+        "status": "Создано"
+    }
+]
