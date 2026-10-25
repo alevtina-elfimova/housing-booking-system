@@ -1,3 +1,4 @@
+from exceptions import BookingNotFoundError
 from datetime import date
 
 from models.accommodation import Apartment
@@ -93,3 +94,11 @@ print("Данные JSON:", loaded_json)
 data_manager.save_xml(xml_file, test_data)
 loaded_xml = data_manager.load_xml(xml_file)
 print("Данные XML:", loaded_xml)
+
+
+print("\nПроверка обработки исключения")
+
+try:
+    system.find_booking(999)
+except BookingNotFoundError as error:
+    print("Ошибка:", error)

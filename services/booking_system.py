@@ -1,3 +1,5 @@
+from exceptions import BookingNotFoundError
+
 class BookingSystem:
     """Класс управления системой бронирования"""
     def __init__(self):
@@ -17,24 +19,19 @@ class BookingSystem:
             if booking.booking_id == booking_id:
                 return booking
 
-        return None
+        raise BookingNotFoundError(
+            f"Бронирование с номером {booking_id} не найдено."
+        )
 
     def update_booking_status(self, booking_id, new_status):
         """Изменяет статус бронирования"""
         booking = self.find_booking(booking_id)
-
-        if booking is None:
-            return False
-
         booking.status = new_status
         return True
 
     def delete_booking(self, booking_id):
         """Удаляет бронирование"""
         booking = self.find_booking(booking_id)
-
-        if booking is None:
-            return False
-
         self.bookings.remove(booking)
         return True
+
