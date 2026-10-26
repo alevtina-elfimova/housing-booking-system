@@ -6,7 +6,8 @@ from models.booking import Booking
 from services.booking_system import BookingSystem
 from services.data_manager import DataManager
 from exceptions import BookingNotFoundError
-
+from services.booking_service import BookingService
+from services.accommodation_search_service import AccommodationSearchService
 
 def create_test_data():
     """Создаёт начальные данные для демонстрации"""
@@ -55,11 +56,14 @@ def show_menu():
     print("10. Загрузить данные из JSON")
     print("11. Сохранить данные в XML")
     print("12. Загрузить данные из XML")
-    print("13. Выход")
+    print("13. Поиск свободного жилья")
+    print("14. Выход")
 
 def main():
     system, customers, accommodations = create_test_data()
     data_manager = DataManager()
+    booking_service = BookingService(system)
+    search_service = AccommodationSearchService()
 
     while True:
         show_menu()
@@ -94,11 +98,11 @@ def main():
                     print("Сначала добавьте жильё.")
                     continue
 
-                print("\n--- Клиенты ---")
+                print("\nКлиенты")
                 for customer in customers:
                     print(customer.get_info())
 
-                customer_id = int(input("Введите ID клиента для бронирования: "))
+                customer_id = int(input("Введите ID клиента: "))
                 customer = next(
                     (c for c in customers if c.customer_id == customer_id),
                     None
@@ -108,13 +112,14 @@ def main():
                     print("Ошибка: клиент не найден.")
                     continue
 
-                print("\n--- Доступное жильё ---")
+                print("\nВсё жильё")
                 for accommodation in accommodations:
                     print(accommodation.get_info())
 
                 accommodation_id = int(
                     input("Введите ID жилья для бронирования: ")
                 )
+
                 accommodation = next(
                     (
                         a for a in accommodations
@@ -127,14 +132,7 @@ def main():
                     print("Ошибка: жильё не найдено.")
                     continue
 
-                booking_id = int(input("Введите номер бронирования: "))
 
-                if any(
-                        b.booking_id == booking_id
-                        for b in system.get_all_bookings()
-                ):
-                    print("Ошибка: бронирование с таким номером уже существует.")
-                    continue
 
                 check_in = date.fromisoformat(
                     input("Дата заезда (ГГГГ-ММ-ДД): ")
@@ -143,19 +141,34 @@ def main():
                     input("Дата выезда (ГГГГ-ММ-ДД): ")
                 )
 
-                booking = Booking(
-                    booking_id,
+                # Проверяем доступность именно выбранного жилья
+                if not search_service.availability_service.is_available(
+                        accommodation,
+                        system.get_all_bookings(),
+                        check_in,
+                        check_out
+                ):
+                    print(
+                        "Отказ: выбранное жильё занято "
+                        "на указанные даты. Бронирование не создано."
+                    )
+                    continue
+
+                # Создаём бронирование только после проверки
+                booking = booking_service.create_booking(
                     customer,
                     accommodation,
                     check_in,
                     check_out
                 )
 
-                system.add_booking(booking)
-
-                print("Бронирование успешно создано!")
+                print("\nБронирование успешно создано!")
+                print("Номер бронирования:", booking.booking_id)
                 print(booking.get_info())
-                print("Стоимость проживания:", booking.calculate_total())
+                print(
+                    "Стоимость проживания:",
+                    booking.calculate_total()
+                )
 
             except ValueError as error:
                 print("Ошибка ввода или даты:", error)
@@ -307,6 +320,67 @@ def main():
                     print("Не удалось восстановить данные из XML:", error)
 
         elif choice == "13":
+            try:
+                check_in = date.fromisoformat(
+                    input("Дата заезда (ГГГГ-ММ-ДД): ")
+                )
+                check_out = date.fromisoformat(
+                    input("Дата выезда (ГГГГ-ММ-ДД): ")
+                )
+
+                if check_out <= check_in:
+                    print("Ошибка: дата выезда должна быть позже даты заезда.")
+                    continue
+
+                available = search_service.search_available(
+                    accommodations,
+                    system.get_all_bookings(),
+                    check_in,
+                    check_out
+                )
+
+                if not available:
+                    print(
+                        "На выбранные даты нет свободного жилья. "
+                        "Попробуйте другие даты."
+                    )
+                    continue
+
+                print("\nСвободное жильё")
+                for accommodation in available:
+                    print(accommodation.get_info())
+
+                max_price = input(
+                    "\nМаксимальная цена за ночь "
+                    "(Enter — без ограничения): "
+                ).strip()
+
+                if max_price:
+                    price_limit = float(max_price)
+
+                    if price_limit <= 0:
+                        print("Цена должна быть положительной.")
+                        continue
+
+                    available = search_service.search_by_price(
+                        available,
+                        price_limit
+                    )
+
+                if available:
+                    print("\nПодходящее жильё")
+                    for accommodation in available:
+                        print(accommodation.get_info())
+                else:
+                    print(
+                        "Свободное жильё найдено, "
+                        "но вариантов в заданном бюджете нет."
+                    )
+
+            except ValueError as error:
+                print("Ошибка ввода или даты:", error)
+
+        elif choice == "14":
             print("Программа завершена.")
             break
 
