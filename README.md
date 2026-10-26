@@ -34,5 +34,5 @@ main.py — запуск программы и главное меню
 Диаграммы классов UML: 
 Диаграммы классов показывают структуру системы бронирования жилья Housing Booking System, 
 включая основные классы, их атрибуты, методы и связи между ними.
-![HousingBookingUML1.drawio.png](HousingBookingUML1.drawio.png)
-![HousingBookingUML2.drawio.png](HousingBookingUML2.drawio.png)
+![HousingBookingUML_1.drawio.png](HousingBookingUML_1.drawio.png)
+![HousingBookingUML_2.drawio.png](HousingBookingUML_2.drawio.png)
